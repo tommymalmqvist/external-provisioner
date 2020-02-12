@@ -476,10 +476,7 @@ func (p *csiProvisioner) ProvisionExt(options controller.ProvisionOptions) (*v1.
 		return nil, controller.ProvisioningFinished, fmt.Errorf("claim Selector is not supported")
 	}
 
-	pvName, err := makeVolumeName(p.volumeNamePrefix, fmt.Sprintf("%s", options.PVC.ObjectMeta.UID), p.volumeNameUUIDLength)
-	if err != nil {
-		return nil, controller.ProvisioningFinished, err
-	}
+	pvName := options.PVC.Name
 
 	fsTypesFound := 0
 	fsType := ""
