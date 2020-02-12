@@ -905,68 +905,7 @@ func (p *csiProvisioner) getSnapshotSource(options controller.ProvisionOptions) 
 }
 
 func (p *csiProvisioner) Delete(volume *v1.PersistentVolume) error {
-	if volume == nil {
-		return fmt.Errorf("invalid CSI PV")
-	}
-
-	var err error
-	if p.translator.IsPVMigratable(volume) {
-		// we end up here only if CSI migration is enabled in-tree (both overall
-		// and for the specific plugin that is migratable) causing in-tree PV
-		// controller to yield deletion of PVs with in-tree source to external provisioner
-		// based on AnnDynamicallyProvisioned annotation.
-		volume, err = p.translator.TranslateInTreePVToCSI(volume)
-		if err != nil {
-			return err
-		}
-	}
-
-	if volume.Spec.CSI == nil {
-		return fmt.Errorf("invalid CSI PV")
-	}
-
-	volumeId := p.volumeHandleToId(volume.Spec.CSI.VolumeHandle)
-
-	rc := &requiredCapabilities{}
-	if err := p.checkDriverCapabilities(rc); err != nil {
-		return err
-	}
-
-	req := csi.DeleteVolumeRequest{
-		VolumeId: volumeId,
-	}
-
-	// get secrets if StorageClass specifies it
-	storageClassName := util.GetPersistentVolumeClass(volume)
-	if len(storageClassName) != 0 {
-		if storageClass, err := p.scLister.Get(storageClassName); err == nil {
-			// Resolve provision secret credentials.
-			provisionerSecretRef, err := getSecretReference(provisionerSecretParams, storageClass.Parameters, volume.Name, &v1.PersistentVolumeClaim{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      volume.Spec.ClaimRef.Name,
-					Namespace: volume.Spec.ClaimRef.Namespace,
-				},
-			})
-			if err != nil {
-				return fmt.Errorf("failed to get secretreference for volume %s: %v", volume.Name, err)
-			}
-
-			credentials, err := getCredentials(p.client, provisionerSecretRef)
-			if err != nil {
-				// Continue with deletion, as the secret may have already been deleted.
-				klog.Errorf("Failed to get credentials for volume %s: %s", volume.Name, err.Error())
-			}
-			req.Secrets = credentials
-		} else {
-			klog.Warningf("failed to get storageclass: %s, proceeding to delete without secrets. %v", storageClassName, err)
-		}
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), p.timeout)
-	defer cancel()
-
-	_, err = p.csiClient.DeleteVolume(ctx, &req)
-
-	return err
+	return nil
 }
 
 func (p *csiProvisioner) SupportsBlock() bool {
